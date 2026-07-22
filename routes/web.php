@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CompanySwitchController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -16,6 +17,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+
+    Route::post('company/switch', CompanySwitchController::class)->name('company.switch');
 });
 
 require __DIR__.'/settings.php';

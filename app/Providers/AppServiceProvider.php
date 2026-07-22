@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Tenancy\CurrentCompany;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -15,7 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Contexto del tenant activo, compartido por panel, API y jobs
+        $this->app->singleton(CurrentCompany::class);
     }
 
     /**
@@ -24,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // El super-admin de plataforma pasa todos los checks de permisos
+        Gate::before(function (User $user): ?bool {
+            return $user->is_super_admin ? true : null;
+        });
     }
 
     /**

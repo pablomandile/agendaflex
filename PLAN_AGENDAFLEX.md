@@ -11,7 +11,7 @@
 | 0 | Preparación del repo y este documento | ✅ |
 | 1 | Setup base (Laravel 12 + Inertia + PrimeVue + Tailwind + dark mode + Vite dual) | ✅ |
 | 2 | Autenticación (Fortify + Google OAuth) | ✅ |
-| 3 | Multi-tenancy + roles | ⬜ |
+| 3 | Multi-tenancy + roles | ✅ |
 | 4 | Modelo de datos / dominio | ⬜ |
 | 5 | Motor de disponibilidad + booking + calendario del panel | ⬜ |
 | 6 | Widget público + API REST | ⬜ |
@@ -100,16 +100,18 @@ Crear proyecto y dejar el panel renderizando con PrimeVue y dark mode funcional.
 ---
 
 ## Etapa 3 — Multi-tenancy + roles
-**Estado:** ⬜ Pendiente · **Depende de:** Etapa 2
+**Estado:** ✅ Completada (UI del switcher pendiente para cuando se arme el panel) · **Depende de:** Etapa 2
 
-- [ ] `app/Tenancy/CurrentCompany.php` — singleton (`set/get/id`, `withoutScope(fn)` para super-admin)
-- [ ] `app/Models/Concerns/BelongsToCompany.php` + `app/Models/Scopes/CompanyScope.php` — scope global + auto-set de `company_id` en `creating`; `company_id` **fuera de `$fillable`**
-- [ ] `app/Http/Middleware/ResolveCompanyFromSession.php` — panel: `current_company_id` validado contra `company_user` + `setPermissionsTeamId()`
-- [ ] `app/Http/Middleware/ResolveCompanyFromPublicKey.php` — widget: valida `slug ↔ public_key ↔ empresa activa`, valida `Origin`, rate-limit por public_key (no setea rol)
-- [ ] `bootstrap/app.php` — orden de middleware: tenant **antes** de `SubstituteBindings` y de `setPermissionsTeamId`; activar `->scopeBindings()` en rutas del panel
-- [ ] `composer require spatie/laravel-permission`; `config/permission.php`: `'teams' => true`, `'team_foreign_key' => 'company_id'` **antes de migrar**
-- [ ] Roles: `super-admin` global (`company_id=null`) + `Gate::before()`; `owner`/`staff`/`client` definidos como globales, **asignados** por `company_id`
-- [ ] Al cambiar de empresa: `setPermissionsTeamId()` + `$user->unsetRelation('roles')->unsetRelation('permissions')`; company switcher para usuarios multi-empresa
+- [x] `app/Tenancy/CurrentCompany.php` — singleton (`set/get/id/check`, `withoutScope(fn)` con restauración en `finally`)
+- [x] `app/Models/Concerns/BelongsToCompany.php` + `app/Models/Scopes/CompanyScope.php` — scope global + auto-set de `company_id` en `creating`; `company_id` fuera de `$fillable`
+- [x] `app/Http/Middleware/ResolveCompanyFromSession.php` — valida `current_company_id` contra membresías (si es inválida cae a la primera membresía) + `setPermissionsTeamId()`
+- [x] `app/Http/Middleware/ResolveCompanyFromPublicKey.php` — valida `slug ↔ public_key ↔ empresa activa` (404 sin filtrar existencia), valida `Origin` contra `allowed_origins`; alias `tenant.public` (rate-limit se agrega con la API en Etapa 6)
+- [x] `bootstrap/app.php` — `ResolveCompanyFromSession` appendeado al grupo web + `$middleware->priority()` con tenant **antes** de `SubstituteBindings`
+- [x] spatie/laravel-permission **8.3** con `teams => true` y `team_foreign_key => 'company_id'` seteados antes de migrar
+- [x] Roles globales (`company_id=null`): `super-admin` (vía `Gate::before` en AppServiceProvider), `owner` (todos los permisos), `staff` (agenda+clientes), `client` (fase 2) — `RolesAndPermissionsSeeder` con 13 permisos
+- [x] Tablas base de tenancy: `companies` (slug/public_key únicos, timezone/locale/currency, settings, allowed_origins), `branches`, `company_user` + modelos con factories
+- [x] `CompanySwitchController` (`POST company/switch`): valida membresía real (403 si no), setea sesión, invalida caché de roles — **UI del switcher se agrega al armar las pantallas del panel**
+- [x] Tests: 11 nuevos (aislamiento de queries, auto-set de company_id, withoutScope, middleware de sesión, switch con/sin membresía, roles distintos por empresa, bypass super-admin, permisos de staff) — **56 tests en verde**
 
 ---
 
