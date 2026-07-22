@@ -10,7 +10,7 @@
 |---|---|---|
 | 0 | Preparación del repo y este documento | ✅ |
 | 1 | Setup base (Laravel 12 + Inertia + PrimeVue + Tailwind + dark mode + Vite dual) | ✅ |
-| 2 | Autenticación (Fortify + Google OAuth) | ⬜ |
+| 2 | Autenticación (Fortify + Google OAuth) | ✅ |
 | 3 | Multi-tenancy + roles | ⬜ |
 | 4 | Modelo de datos / dominio | ⬜ |
 | 5 | Motor de disponibilidad + booking + calendario del panel | ⬜ |
@@ -87,14 +87,15 @@ Crear proyecto y dejar el panel renderizando con PrimeVue y dark mode funcional.
 ---
 
 ## Etapa 2 — Autenticación (Fortify + Google OAuth)
-**Estado:** ⬜ Pendiente · **Depende de:** Etapa 1
+**Estado:** ✅ Completada (falta solo la credencial real de Google, acción manual) · **Depende de:** Etapa 1
 
-- [ ] `composer require laravel/socialite`
-- [ ] `config/services.php` bloque `google` + `.env` (`GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`)
-- [ ] Migración: `users.google_id` (nullable, unique) + `users.password` nullable + `users.is_super_admin` (bool)
-- [ ] `app/Http/Controllers/Auth/GoogleController.php` + rutas web `/auth/google/redirect` y `/auth/google/callback` (buscar/crear user, guardar `google_id`/avatar, `Auth::login`, redirect al dashboard)
-- [ ] Botón "Continuar con Google" como **anchor real** (`<a href="/auth/google/redirect">`), NO visita Inertia/XHR
-- [ ] Registrar el redirect URI exacto en Google Cloud Console (OAuth 2.0 Web Client)
+- [x] `composer require laravel/socialite` (v5.29)
+- [x] `config/services.php` bloque `google` + `.env` (`GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` — valores vacíos hasta crear la credencial)
+- [x] Migración `add_google_oauth_fields_to_users_table`: `google_id` (nullable, unique) + `avatar` + `password` nullable + `is_super_admin` (bool)
+- [x] `app/Http/Controllers/Auth/GoogleController.php` + rutas `guest` `/auth/google/redirect` y `/auth/google/callback`; matchea por `google_id`, vincula cuentas existentes por email, marca email verificado, `Auth::login(remember)`
+- [x] Botón "Continuar con Google" en `Login.vue` como **anchor real** (`<a href>` vía Button as-child), con separador "o" bajo el login de Fortify
+- [x] Tests: 5 casos (redirect, crear usuario, vincular por email, login existente, guest-only) mockeando Socialite — 45 tests en verde
+- [ ] ⚠️ **Acción manual (Pablo):** crear OAuth 2.0 Client ID (Web) en Google Cloud Console con redirect URI `http://localhost:8000/auth/google/callback` y completar `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` en `.env`
 
 ---
 
