@@ -12,7 +12,7 @@
 | 1 | Setup base (Laravel 12 + Inertia + PrimeVue + Tailwind + dark mode + Vite dual) | ✅ |
 | 2 | Autenticación (Fortify + Google OAuth) | ✅ |
 | 3 | Multi-tenancy + roles | ✅ |
-| 4 | Modelo de datos / dominio | ⬜ |
+| 4 | Modelo de datos / dominio | ✅ |
 | 5 | Motor de disponibilidad + booking + calendario del panel | ⬜ |
 | 6 | Widget público + API REST | ⬜ |
 | 7 | Notificaciones email + reportes | ⬜ |
@@ -116,18 +116,21 @@ Crear proyecto y dejar el panel renderizando con PrimeVue y dark mode funcional.
 ---
 
 ## Etapa 4 — Modelo de datos / dominio
-**Estado:** ⬜ Pendiente · **Depende de:** Etapa 3
+**Estado:** ✅ Completada · **Depende de:** Etapa 3
 
 Convención: casi toda tabla lleva `company_id` (FK + índice compuesto); timestamps + soft deletes; IDs `bigint` internos, `uuid`/`slug` público; unicidad **siempre compuesta con `company_id`**.
 
-- [ ] Tenancy/plataforma: `companies` (`slug` unique, `public_key` unique, `timezone`, `locale`, `currency`, `status`, `settings` json, dominios permitidos del widget), `branches`, `company_user`, tablas spatie (con `company_id` en pivotes)
-- [ ] Empleados: `employees` (`user_id` nullable, `branch_id`, `color`), `employee_service` (skills + override opcional duración/precio)
-- [ ] Servicios/recursos: `service_categories`, `services` (`duration_minutes`, `buffer_before/after_minutes`, `price`, `max_capacity`), `resource_types`, `resources` (`branch_id`), `service_required_resources` (`resource_type_id`, `quantity`)
-- [ ] Clientes: `customers` (`user_id` nullable, índice `(company_id, email)`)
-- [ ] Horarios: `working_hours` (recurrente por empleado/día, `effective_from/to`, varias filas por día para turnos partidos), `time_off`/`schedule_exceptions` (vacaciones, feriados de sucursal, ausencias, disponibilidad extra)
-- [ ] Turnos: `appointments` (`starts_at`/`ends_at` en **UTC**, `status`, `source`, `rescheduled_from_id` self-FK; índices `(company_id, employee_id, starts_at)`), `appointment_resource` (N–N), `waitlist_entries`
-- [ ] Notificaciones: `notification_logs` (`type`, `channel`, `status`, `sent_at`)
-- [ ] Seeders de demo (empresa + sucursal + servicios + empleados + horarios) para probar
+- [x] Tenancy/plataforma: `companies`, `branches`, `company_user`, tablas spatie — hechas en Etapa 3
+- [x] Empleados: `employees` (`user_id` nullable, `branch_id`, `color`, uuid público), `employee_service` (skills + `custom_duration_minutes`/`custom_price`)
+- [x] Servicios/recursos: `service_categories`, `services` (uuid, duración, buffers, precio, `max_capacity` para grupales, unique `(company_id, slug)`), `resource_types`, `resources`, `service_required_resources` (tipo + `quantity`)
+- [x] Clientes: `customers` (uuid, `user_id` nullable para fase 2, índice `(company_id, email)` para matcheo del widget)
+- [x] Horarios: `working_hours` (por empleado/día, `effective_from/to`, turnos partidos) y `time_off` (vacaciones/feriado de sucursal/cierre de empresa/extra, según combinación de `employee_id`/`branch_id` null)
+- [x] Turnos: `appointments` (UTC, `status`, `source`, `rescheduled_from_id`, índices por empleado/sucursal/cliente), `appointment_resource` (N–N), `waitlist_entries` (con `priority`)
+- [x] Notificaciones: `notification_logs` (channel/type/recipient/status/sent_at/error)
+- [x] 11 modelos con trait `BelongsToCompany` + `HasUuids` en los públicos (uuid además de la PK), relaciones completas y helpers (`totalDurationMinutes()`, `isActive()`, `isExtraAvailability()`)
+- [x] 10 factories del dominio
+- [x] `DemoSeeder`: "Estudio Norte" (peluquería, 2 sucursales, 5 servicios, 3 empleados con skills y horario partido mar-sáb, 5 sillones, 12 clientes, 15 turnos) — logins demo: `owner@agendaflex.test` / `admin@agendaflex.test` (super-admin), password `password`
+- [x] Tests: 8 nuevos (uuids, aislamiento, pivotes con overrides, recursos por turno, buffers, seeder completo) — **64 tests en verde**
 
 ---
 
