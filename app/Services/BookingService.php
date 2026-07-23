@@ -25,7 +25,10 @@ use InvalidArgumentException;
  */
 class BookingService
 {
-    public function __construct(private AvailabilityService $availability) {}
+    public function __construct(
+        private AvailabilityService $availability,
+        private AppointmentNotifier $notifier,
+    ) {}
 
     /**
      * @param  Customer|array{name: string, email: string, phone?: string|null}  $customer
@@ -38,6 +41,7 @@ class BookingService
         CarbonImmutable $startsAt,
         string $source = 'panel',
         ?string $notes = null,
+        bool $notify = true,
     ): Appointment {
         $this->assertSameCompany($branch, $service, $employee);
 
@@ -48,7 +52,7 @@ class BookingService
         $startsAt = $startsAt->utc();
         $endsAt = $startsAt->addMinutes((int) $duration);
 
-        return DB::transaction(function () use ($branch, $service, $employee, $customer, $startsAt, $endsAt, $price, $source, $notes) {
+        $appointment = DB::transaction(function () use ($branch, $service, $employee, $customer, $startsAt, $endsAt, $price, $source, $notes) {
             // 1. Lock del rango: bloquea los turnos activos cercanos del
             //    empleado y serializa cualquier reserva concurrente.
             $existing = Appointment::query()
@@ -96,6 +100,13 @@ class BookingService
 
             return $appointment;
         });
+
+        // Fuera de la transacción: un rollback no debe encolar emails
+        if ($notify) {
+            $this->notifier->confirmed($appointment);
+        }
+
+        return $appointment;
     }
 
     public function cancel(Appointment $appointment, ?string $reason = null): Appointment
@@ -112,6 +123,7 @@ class BookingService
                 : $appointment->notes,
         ])->save();
 
+        $this->notifier->cancelled($appointment);
         $this->promoteWaitlist($appointment);
 
         return $appointment;
@@ -129,7 +141,7 @@ class BookingService
 
         $employee = $newEmployee ?? $appointment->employee;
 
-        return DB::transaction(function () use ($appointment, $newStartsAt, $employee) {
+        $new = DB::transaction(function () use ($appointment, $newStartsAt, $employee) {
             // Cancelar primero libera el slot original (permite mover el
             // turno unos minutos con solape sobre sí mismo)
             $appointment->forceFill(['status' => 'cancelled', 'cancelled_at' => now()])->save();
@@ -142,14 +154,18 @@ class BookingService
                 startsAt: $newStartsAt,
                 source: $appointment->source,
                 notes: $appointment->notes,
+                notify: false, // se envía "reprogramado", no "confirmado"
             );
 
             $new->forceFill(['rescheduled_from_id' => $appointment->id])->save();
 
-            $this->promoteWaitlist($appointment);
-
             return $new;
         });
+
+        $this->notifier->rescheduled($new);
+        $this->promoteWaitlist($appointment);
+
+        return $new;
     }
 
     private function groupMates(Collection $existing, Service $service, CarbonImmutable $startsAt): Collection
@@ -247,12 +263,12 @@ class BookingService
     }
 
     /**
-     * Un slot se liberó: marca al primero de la lista de espera que
-     * matchee. (El email de aviso se envía en la Etapa 7.)
+     * Un slot se liberó: marca y avisa por email al primero de la lista
+     * de espera que matchee servicio/sucursal/empleado/rango.
      */
     private function promoteWaitlist(Appointment $appointment): void
     {
-        WaitlistEntry::query()
+        $entry = WaitlistEntry::query()
             ->where('status', 'waiting')
             ->where('service_id', $appointment->service_id)
             ->where('branch_id', $appointment->branch_id)
@@ -261,8 +277,12 @@ class BookingService
             ->where('desired_to', '>', $appointment->starts_at)
             ->orderByDesc('priority')
             ->orderBy('id')
-            ->first()
-            ?->update(['status' => 'notified']);
+            ->first();
+
+        if ($entry) {
+            $entry->update(['status' => 'notified']);
+            $this->notifier->waitlistSlotFreed($entry);
+        }
     }
 
     private function assertSameCompany(Branch $branch, Service $service, Employee $employee): void

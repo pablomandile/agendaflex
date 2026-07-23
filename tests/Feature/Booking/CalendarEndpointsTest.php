@@ -180,7 +180,7 @@ class CalendarEndpointsTest extends TestCase
     {
         $start = $this->nextMondayAt(10);
 
-        $appointment = Appointment::factory()->for($this->company)->create([
+        $appointment = Appointment::factory()->for($this->company)->recycle($this->company)->create([
             'branch_id' => $this->branch->id,
             'employee_id' => $this->employee->id,
             'service_id' => $this->service->id,

@@ -7,6 +7,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CompanySwitchController;
 use App\Http\Controllers\CustomerSearchController;
 use App\Http\Controllers\PublicBookingController;
+use App\Http\Controllers\ReportsController;
 use App\Models\Company;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -60,6 +61,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('can:appointments.cancel')->name('appointments.cancel');
         Route::post('appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule'])
             ->middleware('can:appointments.update')->name('appointments.reschedule');
+
+        Route::get('reports', ReportsController::class)
+            ->middleware('can:reports.view')->name('reports');
     });
 });
 

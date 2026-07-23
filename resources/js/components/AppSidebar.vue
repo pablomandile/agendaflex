@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import {
     BookOpen,
     CalendarDays,
+    ChartColumn,
     FolderGit2,
     LayoutGrid,
 } from 'lucide-vue-next';
@@ -32,6 +33,11 @@ const mainNavItems: NavItem[] = [
         title: 'Agenda',
         href: '/calendar',
         icon: CalendarDays,
+    },
+    {
+        title: 'Reportes',
+        href: '/reports',
+        icon: ChartColumn,
     },
 ];
 

@@ -222,7 +222,7 @@ class BookingServiceTest extends TestCase
             startsAt: $this->slotStart,
         );
 
-        $entry = WaitlistEntry::factory()->for($this->company)->create([
+        $entry = WaitlistEntry::factory()->for($this->company)->recycle($this->company)->create([
             'branch_id' => $this->branch->id,
             'service_id' => $this->service->id,
             'employee_id' => null,

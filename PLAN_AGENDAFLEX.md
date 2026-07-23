@@ -15,7 +15,7 @@
 | 4 | Modelo de datos / dominio | ✅ |
 | 5 | Motor de disponibilidad + booking + calendario del panel | ✅ |
 | 6 | Widget público + API REST | ✅ |
-| 7 | Notificaciones email + reportes | ⬜ |
+| 7 | Notificaciones email + reportes | ✅ |
 | 8 | Responsive + verificación end-to-end + pulido | ⬜ |
 
 ---
@@ -164,12 +164,16 @@ Pendiente menor (a Etapa 8): bloquear/desbloquear `time_off` desde la UI del cal
 ---
 
 ## Etapa 7 — Notificaciones email + reportes
-**Estado:** ⬜ Pendiente · **Depende de:** Etapa 6
+**Estado:** ✅ Completada · **Depende de:** Etapa 6
 
-- [ ] Mailables + queue: confirmación, recordatorio, cancelación, reprogramación; registrar en `notification_logs`
-- [ ] Recordatorios: job en scheduler que **itera empresas** con `CurrentCompany::set()` + `setPermissionsTeamId()` por iteración
-- [ ] Reportes derivados de `appointments` (agregando por `company_id`/`employee_id`/`service_id`/rango): ocupación, ingresos, servicios populares, rendimiento por empleado — dashboard PrimeVue
-- [ ] Verificar con Mailpit (emails + links firmados) y `php artisan schedule:test`
+- [x] 5 Mailables encolados (markdown, en español): confirmación, recordatorio, cancelación, reprogramación (sobre el turno nuevo, con horario anterior tachado) y aviso de lista de espera — todos con link firmado de gestión donde aplica
+- [x] `AppointmentNotifier`: encola el mail + auditoría en `notification_logs`; el log **hereda `company_id` del turno** (los flujos públicos como el link firmado corren sin tenant). Integrado a `BookingService`: emails SIEMPRE fuera de la transacción (un rollback no encola), reprogramar suprime la confirmación duplicada (`notify: false`), cancelar promueve y avisa a la lista de espera
+- [x] `appointments:send-reminders`: itera empresas activas seteando `CurrentCompany` + `setPermissionsTeamId` por vuelta, ventana configurable por empresa (`settings.reminder_hours`, default 24 h), dedupe por `notification_logs`; agendado cada 15' con `withoutOverlapping` en [routes/console.php](routes/console.php)
+- [x] `ReportService` (derivado de `appointments`, sin tablas nuevas): ingresos (confirmado+completado), turnos facturables, clientes únicos, tasa de cancelación/ausencias, servicios más pedidos, y rendimiento por empleado con **ocupación** (minutos reservados / minutos de agenda publicada por `working_hours` × días del rango)
+- [x] Página **Reportes** ([reports/Index.vue](resources/js/pages/reports/Index.vue)): filtro de rango (default mes en curso), 4 KPI tiles + 2 tablas (números en tokens de texto, color solo como chip de identidad del empleado), ítem en sidebar; ruta `can:reports.view` (staff 403, testeado)
+- [x] Tests: 11 nuevos (confirmación+log, cancelación, reprogramación sin doble confirmación, waitlist, ventana de recordatorios + dedupe + iteración multi-empresa + empresas suspendidas excluidas + ventana por empresa, totales de reportes + scoping + permisos + rango custom) — **112 tests en verde**
+
+Verificación manual (opcional): `composer run dev` corre el queue worker; con `MAIL_MAILER=log` los emails quedan en `storage/logs/laravel.log` (o configurá Mailpit con `MAIL_MAILER=smtp`, puerto 1025). Scheduler local: `php artisan schedule:work`.
 
 ---
 
