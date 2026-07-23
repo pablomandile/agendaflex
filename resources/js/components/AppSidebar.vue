@@ -8,6 +8,7 @@ import {
     LayoutGrid,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
+import CompanySwitcher from '@/components/CompanySwitcher.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -67,6 +68,7 @@ const footerNavItems: NavItem[] = [
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
+            <CompanySwitcher class="group-data-[collapsible=icon]:hidden" />
         </SidebarHeader>
 
         <SidebarContent>

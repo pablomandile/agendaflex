@@ -117,6 +117,7 @@ class CalendarController extends Controller
                 'color' => '#94a3b8',
                 'extendedProps' => [
                     'kind' => 'time_off',
+                    'time_off_id' => $off->id,
                     'type' => $off->type,
                     'reason' => $off->reason,
                     'employee_id' => $off->employee_id,

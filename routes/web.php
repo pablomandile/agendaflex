@@ -8,6 +8,7 @@ use App\Http\Controllers\CompanySwitchController;
 use App\Http\Controllers\CustomerSearchController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\TimeOffController;
 use App\Models\Company;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -64,6 +65,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('reports', ReportsController::class)
             ->middleware('can:reports.view')->name('reports');
+
+        // Bloqueos de agenda desde el calendario
+        Route::post('time-off', [TimeOffController::class, 'store'])
+            ->middleware('can:appointments.update')->name('time-off.store');
+        Route::delete('time-off/{timeOff}', [TimeOffController::class, 'destroy'])
+            ->middleware('can:appointments.update')->name('time-off.destroy');
     });
 });
 

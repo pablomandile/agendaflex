@@ -35,11 +35,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                // Empresas del usuario + activa, para el switcher del sidebar
+                'companies' => $user
+                    ? $user->companies()
+                        ->get(['companies.id', 'companies.name'])
+                        ->map(fn ($company) => ['id' => $company->id, 'name' => $company->name])
+                    : [],
+                'currentCompanyId' => $request->session()->get('current_company_id'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

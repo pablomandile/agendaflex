@@ -330,6 +330,20 @@ const rescheduleSlots = ref<Slot[]>([]);
 const rescheduleSlot = ref<Slot | null>(null);
 
 function onEventClick(arg: EventClickArg) {
+    if (arg.event.extendedProps.kind === 'time_off') {
+        timeOffDetail.value = {
+            id: arg.event.extendedProps.time_off_id,
+            type: arg.event.extendedProps.type,
+            reason: arg.event.extendedProps.reason,
+            employee_id: arg.event.extendedProps.employee_id,
+            start: arg.event.startStr,
+            end: arg.event.endStr,
+        };
+        timeOffDetailOpen.value = true;
+
+        return;
+    }
+
     if (arg.event.extendedProps.kind !== 'appointment') {
         return;
     }
@@ -421,6 +435,111 @@ function confirmReschedule() {
     );
 }
 
+// ── Bloqueos de agenda (time off) ───────────────────────────────────
+interface TimeOffDetail {
+    id: number;
+    type: string;
+    reason: string | null;
+    employee_id: number | null;
+    start: string;
+    end: string;
+}
+
+const timeOffDetail = ref<TimeOffDetail | null>(null);
+const timeOffDetailOpen = ref(false);
+const blockOpen = ref(false);
+const blockErrors = ref<Record<string, string>>({});
+
+const blockForm = reactive({
+    employee_id: null as number | null,
+    starts_at: null as Date | null,
+    ends_at: null as Date | null,
+    type: 'block',
+    reason: '',
+});
+
+const blockTypes = [
+    { label: 'Bloqueo puntual', value: 'block' },
+    { label: 'Vacaciones', value: 'vacation' },
+    { label: 'Enfermedad', value: 'sick' },
+];
+
+function formatDateTimeParam(date: Date): string {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${formatDateParam(date)} ${hours}:${minutes}`;
+}
+
+function openBlock() {
+    blockForm.employee_id = employeeId.value;
+    blockForm.starts_at = null;
+    blockForm.ends_at = null;
+    blockForm.type = 'block';
+    blockForm.reason = '';
+    blockErrors.value = {};
+    blockOpen.value = true;
+}
+
+function submitBlock() {
+    if (!blockForm.employee_id || !blockForm.starts_at || !blockForm.ends_at) {
+        return;
+    }
+
+    router.post(
+        '/time-off',
+        {
+            employee_id: blockForm.employee_id,
+            starts_at: formatDateTimeParam(blockForm.starts_at),
+            ends_at: formatDateTimeParam(blockForm.ends_at),
+            type: blockForm.type,
+            reason: blockForm.reason || null,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                blockOpen.value = false;
+                refetchEvents();
+                toast.add({
+                    severity: 'success',
+                    summary: 'Horario bloqueado',
+                    life: 3000,
+                });
+            },
+            onError: (formErrors) => {
+                blockErrors.value = formErrors as Record<string, string>;
+            },
+        },
+    );
+}
+
+function deleteTimeOff() {
+    if (!timeOffDetail.value) {
+        return;
+    }
+
+    router.delete(`/time-off/${timeOffDetail.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            timeOffDetailOpen.value = false;
+            refetchEvents();
+            toast.add({
+                severity: 'info',
+                summary: 'Bloqueo eliminado',
+                life: 3000,
+            });
+        },
+    });
+}
+
+const timeOffTypeLabel: Record<string, string> = {
+    block: 'Bloqueo puntual',
+    vacation: 'Vacaciones',
+    sick: 'Enfermedad',
+    holiday: 'Feriado',
+    extra: 'Disponibilidad extra',
+};
+
 const statusSeverity: Record<string, string> = {
     confirmed: 'success',
     pending: 'warn',
@@ -465,13 +584,22 @@ function formatEventTime(iso: string): string {
                     show-clear
                     class="w-full sm:w-56"
                 />
-                <Button
-                    label="Nuevo turno"
-                    icon="pi pi-plus"
-                    class="sm:ml-auto"
-                    data-test="new-appointment"
-                    @click="openCreate"
-                />
+                <div class="flex gap-2 sm:ml-auto">
+                    <Button
+                        label="Bloquear horario"
+                        icon="pi pi-ban"
+                        severity="secondary"
+                        outlined
+                        data-test="block-time"
+                        @click="openBlock"
+                    />
+                    <Button
+                        label="Nuevo turno"
+                        icon="pi pi-plus"
+                        data-test="new-appointment"
+                        @click="openCreate"
+                    />
+                </div>
             </div>
 
             <!-- Calendario -->
@@ -755,6 +883,130 @@ function formatEventTime(iso: string): string {
                         @click="confirmReschedule"
                     />
                 </template>
+            </template>
+        </Dialog>
+        <!-- Diálogo: bloquear horario -->
+        <Dialog
+            v-model:visible="blockOpen"
+            modal
+            header="Bloquear horario"
+            class="w-full max-w-md"
+        >
+            <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium">Empleado</label>
+                    <Select
+                        v-model="blockForm.employee_id"
+                        :options="employeesForBranch"
+                        option-label="name"
+                        option-value="id"
+                        placeholder="Elegí un empleado"
+                    />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium">Tipo</label>
+                    <Select
+                        v-model="blockForm.type"
+                        :options="blockTypes"
+                        option-label="label"
+                        option-value="value"
+                    />
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium">Desde</label>
+                        <DatePicker
+                            v-model="blockForm.starts_at"
+                            show-time
+                            hour-format="24"
+                            date-format="dd/mm/yy"
+                        />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-medium">Hasta</label>
+                        <DatePicker
+                            v-model="blockForm.ends_at"
+                            show-time
+                            hour-format="24"
+                            date-format="dd/mm/yy"
+                        />
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-medium">Motivo</label>
+                    <InputText
+                        v-model="blockForm.reason"
+                        placeholder="Opcional"
+                    />
+                </div>
+                <small v-if="blockErrors.ends_at" class="text-red-500">
+                    {{ blockErrors.ends_at }}
+                </small>
+            </div>
+
+            <template #footer>
+                <Button
+                    label="Cancelar"
+                    severity="secondary"
+                    text
+                    @click="blockOpen = false"
+                />
+                <Button
+                    label="Bloquear"
+                    icon="pi pi-ban"
+                    :disabled="
+                        !blockForm.employee_id ||
+                        !blockForm.starts_at ||
+                        !blockForm.ends_at
+                    "
+                    @click="submitBlock"
+                />
+            </template>
+        </Dialog>
+
+        <!-- Diálogo: detalle de bloqueo -->
+        <Dialog
+            v-model:visible="timeOffDetailOpen"
+            modal
+            header="Bloqueo de agenda"
+            class="w-full max-w-sm"
+        >
+            <div v-if="timeOffDetail" class="flex flex-col gap-2 text-sm">
+                <div class="flex items-center gap-2">
+                    <Tag
+                        :value="
+                            timeOffTypeLabel[timeOffDetail.type] ??
+                            timeOffDetail.type
+                        "
+                        severity="secondary"
+                    />
+                    <span v-if="timeOffDetail.employee_id">
+                        {{ employeeName(timeOffDetail.employee_id) }}
+                    </span>
+                    <span v-else>Toda la sucursal</span>
+                </div>
+                <div class="capitalize">
+                    {{ formatEventTime(timeOffDetail.start) }} —
+                    {{ formatEventTime(timeOffDetail.end) }}
+                </div>
+                <p v-if="timeOffDetail.reason" class="text-muted-foreground">
+                    {{ timeOffDetail.reason }}
+                </p>
+            </div>
+
+            <template #footer>
+                <Button
+                    label="Cerrar"
+                    severity="secondary"
+                    text
+                    @click="timeOffDetailOpen = false"
+                />
+                <Button
+                    label="Eliminar bloqueo"
+                    severity="danger"
+                    icon="pi pi-trash"
+                    @click="deleteTimeOff"
+                />
             </template>
         </Dialog>
     </AppLayout>

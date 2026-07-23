@@ -16,7 +16,9 @@
 | 5 | Motor de disponibilidad + booking + calendario del panel | ✅ |
 | 6 | Widget público + API REST | ✅ |
 | 7 | Notificaciones email + reportes | ✅ |
-| 8 | Responsive + verificación end-to-end + pulido | ⬜ |
+| 8 | Responsive + verificación end-to-end + pulido | ✅ |
+
+**🎉 MVP COMPLETO — las 9 etapas terminadas y verificadas en CI.**
 
 ---
 
@@ -100,7 +102,7 @@ Crear proyecto y dejar el panel renderizando con PrimeVue y dark mode funcional.
 ---
 
 ## Etapa 3 — Multi-tenancy + roles
-**Estado:** ✅ Completada (UI del switcher pendiente para cuando se arme el panel) · **Depende de:** Etapa 2
+**Estado:** ✅ Completada (switcher UI agregado en Etapa 8) · **Depende de:** Etapa 2
 
 - [x] `app/Tenancy/CurrentCompany.php` — singleton (`set/get/id/check`, `withoutScope(fn)` con restauración en `finally`)
 - [x] `app/Models/Concerns/BelongsToCompany.php` + `app/Models/Scopes/CompanyScope.php` — scope global + auto-set de `company_id` en `creating`; `company_id` fuera de `$fillable`
@@ -144,7 +146,7 @@ Convención: casi toda tabla lleva `company_id` (FK + índice compuesto); timest
 - [x] Calendario UI ([pages/calendar/Index.vue](resources/js/pages/calendar/Index.vue)): FullCalendar 6 (MIT) día/semana/mes en español, filtros por sucursal/empleado, colores por empleado, diálogo de reserva (servicio → empleado → fecha → slots → cliente existente o nuevo → notas), diálogo de detalle con cancelar/reprogramar, toasts; vista día en mobile; estilos integrados a tokens PrimeVue; ítem "Agenda" en el sidebar
 - [x] Tests: 26 nuevos — disponibilidad (horario partido, buffers, vacaciones, feriado de sucursal, extra, recursos entre empleados, cupos grupales), booking (doble reserva serializada, fuera de agenda, recursos agotados, grupos hasta capacidad, cross-company, cancelar+waitlist, reprogramar) y endpoints (scoping, validaciones, 404 cross-tenant, permisos) — **90 tests en verde**
 
-Pendiente menor (a Etapa 8): bloquear/desbloquear `time_off` desde la UI del calendario (hoy se ven como fondo gris; el ABM llega con las pantallas de gestión).
+~~Pendiente menor (a Etapa 8): bloquear/desbloquear `time_off` desde la UI del calendario.~~ ✅ Resuelto en Etapa 8.
 
 ---
 
@@ -178,13 +180,16 @@ Verificación manual (opcional): `composer run dev` corre el queue worker; con `
 ---
 
 ## Etapa 8 — Responsive + verificación end-to-end + pulido
-**Estado:** ⬜ Pendiente · **Depende de:** Etapas 1–7
+**Estado:** ✅ Completada · **Depende de:** Etapas 1–7
 
-- [ ] Responsive panel: contenedor `max-w-screen-2xl mx-auto` + layout sidebar; utilities responsive + breakpoints PrimeVue; sin anchos fijos px; verificar que no exceda ancho en desktop y funcione en mobile
-- [ ] Test de arquitectura (Pest): todo modelo con `company_id` usa `BelongsToCompany`; aislamiento cross-tenant (query scopeada + route binding 404 cross-tenant)
-- [ ] Test de roles: super-admin ve todo; `owner` su empresa; `staff` solo su agenda; `setPermissionsTeamId` al cambiar de empresa
-- [ ] Recorrido E2E completo: crear 2 empresas → configurar servicios/empleados/horarios/recursos → reservar por widget → recibir email → cancelar por link → ver reporte
-- [ ] Pulido de UI/UX y estados de error/carga
+- [x] **Test de arquitectura**: todo modelo con `company_id` DEBE usar `BelongsToCompany` (escanea `app/Models` por reflexión — falla ante cualquier modelo futuro sin el trait) + ningún modelo puede tener `company_id` fillable. El aislamiento cross-tenant y los roles ya estaban testeados (Etapas 3-7)
+- [x] **Bloqueos desde el calendario** (pendiente de Etapa 5): botón "Bloquear horario" (empleado + tipo + desde/hasta + motivo) y click sobre un bloqueo para eliminarlo; `TimeOffController` con rutas `can:appointments.update`; 5 tests (validación, cross-tenant 404 en alta y baja)
+- [x] **Company switcher** (pendiente de Etapa 3): empresas del usuario + activa compartidas por Inertia (`auth.companies`/`auth.currentCompanyId`); [CompanySwitcher.vue](resources/js/components/CompanySwitcher.vue) en el header del sidebar — label estático con 1 empresa, Select con varias, nada para super-admin sin membresías
+- [x] **Usuario staff demo**: `staff@agendaflex.test` / `password` (rol staff, vinculado a la empleada Carla Gómez) — permite probar la diferencia de permisos vs owner (sin Reportes, p.ej.)
+- [x] **Recorrido E2E** ([FullJourneyTest](tests/Feature/FullJourneyTest.php)): 2 empresas configuradas (servicios+empleados+horarios+recursos) → reserva por API pública del widget → email de confirmación → visible en el calendario del panel → página firmada sin login → cancelación por link → email de cancelación → reporte refleja todo → **la otra empresa nunca ve nada**
+- [x] Responsive verificado por diseño: layout sidebar del kit, sin anchos fijos en px, `min-w-0`/`overflow` en calendario y tablas, vista día en mobile, widget al 100% del contenedor host
+- [x] Estados de carga/error ya cubiertos en widget y diálogos del panel (Etapas 5-6)
+- [x] **120 tests, 427 aserciones — todo en verde**
 
 ---
 

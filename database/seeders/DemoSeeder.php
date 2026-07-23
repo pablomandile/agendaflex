@@ -55,7 +55,7 @@ class DemoSeeder extends Seeder
         );
 
         // ── Usuarios: super-admin de plataforma y owner del negocio ─────
-        $superAdmin = User::query()->firstOrCreate(
+        User::query()->firstOrCreate(
             ['email' => 'admin@agendaflex.test'],
             ['name' => 'Platform Admin', 'password' => Hash::make('password'), 'is_super_admin' => true],
         );
@@ -137,6 +137,23 @@ class DemoSeeder extends Seeder
 
             return $employee;
         });
+
+        // ── Usuario staff vinculado a una empleada ───────────────────────
+        $staff = User::query()->firstOrCreate(
+            ['email' => 'staff@agendaflex.test'],
+            ['name' => 'Carla Gómez', 'password' => Hash::make('password')],
+        );
+
+        if (! $staff->belongsToCompany($company)) {
+            $staff->companies()->attach($company);
+        }
+
+        if (! $staff->hasRole('staff')) {
+            $staff->assignRole('staff');
+        }
+
+        $employees->firstWhere('name', 'Carla Gómez')
+            ?->update(['user_id' => $staff->id]);
 
         // ── Clientes y turnos de ejemplo ─────────────────────────────────
         if (Customer::query()->count() === 0) {
