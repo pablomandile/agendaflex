@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureCompanySelected;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveCompanyFromPublicKey;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'tenant.public' => ResolveCompanyFromPublicKey::class,
+            'company.selected' => EnsureCompanySelected::class,
         ]);
 
         // El tenant debe resolverse ANTES del route-model binding para que

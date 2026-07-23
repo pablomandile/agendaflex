@@ -13,7 +13,7 @@
 | 2 | Autenticación (Fortify + Google OAuth) | ✅ |
 | 3 | Multi-tenancy + roles | ✅ |
 | 4 | Modelo de datos / dominio | ✅ |
-| 5 | Motor de disponibilidad + booking + calendario del panel | ⬜ |
+| 5 | Motor de disponibilidad + booking + calendario del panel | ✅ |
 | 6 | Widget público + API REST | ⬜ |
 | 7 | Notificaciones email + reportes | ⬜ |
 | 8 | Responsive + verificación end-to-end + pulido | ⬜ |
@@ -135,13 +135,16 @@ Convención: casi toda tabla lleva `company_id` (FK + índice compuesto); timest
 ---
 
 ## Etapa 5 — Motor de disponibilidad + booking + calendario del panel
-**Estado:** ⬜ Pendiente · **Depende de:** Etapa 4
+**Estado:** ✅ Completada · **Depende de:** Etapa 4
 
-- [ ] `app/Services/AvailabilityService.php` → `slotsFor(company, branch, service, ?employee, dateRange)`: candidatos por skill → ventana de trabajo (unir `working_hours` vigentes en tz branch, restar `time_off`/feriados, sumar `extra_availability`) → restar ocupación (con buffers) → generar slots (`slot_step` por empresa) → chequeo de recursos requeridos → capacidad grupal (`max_capacity`)
-- [ ] Booking transaccional (concurrencia): transacción + `SELECT … FOR UPDATE` sobre turnos/recursos, re-verificar solape (empleado + cada recurso), insertar `appointment` + `appointment_resource`, validar que branch/employee/service/resources compartan `company_id`
-- [ ] Cancelar/reprogramar: liberar slots, disparar `waitlist` (notificar al primero), guardar `rescheduled_from_id`
-- [ ] Calendario del panel (UI): vistas **día/semana/mes** con PrimeVue, filtrables por empleado/sucursal/recurso, color por empleado; crear/editar/cancelar/reprogramar desde el calendario; bloquear/desbloquear horarios (`time_off`); vista día primaria en mobile
-- [ ] Tests: disponibilidad (horarios+buffers+recursos) y concurrencia (dos reservas al mismo slot no duplican)
+- [x] `AvailabilityService::slotsFor(branch, service, ?employee, from, to)`: candidatos por skill → ventanas de `working_hours` (vigencia + turnos partidos, en tz de sucursal) − `time_off` (empleado/sucursal/empresa) + `extra` → − turnos activos expandidos por buffers → slots por `slot_step` (settings de empresa, default 15') → chequeo de recursos requeridos por tipo/cantidad → cupos grupales (`max_capacity`: el inicio exacto de un grupo con cupo se ofrece)
+- [x] `BookingService::book()` transaccional: `SELECT … FOR UPDATE` sobre turnos del empleado (serializa reservas concurrentes) → re-verifica solape con buffers → valida agenda → lockea y asigna recursos libres (grupos comparten recursos) → precio/duración con overrides de `employee_service` → matchea/crea `customer` por email
+- [x] `cancel()` (libera slot + promueve `waitlist` → email en Etapa 7) y `reschedule()` (cancela primero para permitir mover con solape, crea turno nuevo con `rescheduled_from_id`)
+- [x] Endpoints: `GET /calendar` (Inertia con props scopeadas), `GET /calendar/events` (formato FullCalendar + time_off como fondo), `GET /availability` (slots del diálogo), `GET /customers/search`, `POST /appointments` + `/cancel` + `/reschedule` — todos con `can:` por permiso + middleware `company.selected` (nuevo `EnsureCompanySelected`)
+- [x] Calendario UI ([pages/calendar/Index.vue](resources/js/pages/calendar/Index.vue)): FullCalendar 6 (MIT) día/semana/mes en español, filtros por sucursal/empleado, colores por empleado, diálogo de reserva (servicio → empleado → fecha → slots → cliente existente o nuevo → notas), diálogo de detalle con cancelar/reprogramar, toasts; vista día en mobile; estilos integrados a tokens PrimeVue; ítem "Agenda" en el sidebar
+- [x] Tests: 26 nuevos — disponibilidad (horario partido, buffers, vacaciones, feriado de sucursal, extra, recursos entre empleados, cupos grupales), booking (doble reserva serializada, fuera de agenda, recursos agotados, grupos hasta capacidad, cross-company, cancelar+waitlist, reprogramar) y endpoints (scoping, validaciones, 404 cross-tenant, permisos) — **90 tests en verde**
+
+Pendiente menor (a Etapa 8): bloquear/desbloquear `time_off` desde la UI del calendario (hoy se ven como fondo gris; el ABM llega con las pantallas de gestión).
 
 ---
 
