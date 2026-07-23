@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Demo — Widget Agendaflex embebido</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Georgia, 'Times New Roman', serif; /* estilo "sitio ajeno" a propósito */
+            margin: 0;
+            background: #faf7f2;
+            color: #3b3129;
+        }
+        .site-header {
+            background: #7c5c3e;
+            color: #fff;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+        }
+        .site-header h1 { margin: 0 0 .3rem; }
+        main {
+            max-width: 60rem;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 800px) {
+            main { grid-template-columns: 1.1fr 1fr; }
+        }
+        .widget-panel {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgb(0 0 0 / .08);
+            font-family: ui-sans-serif, system-ui, sans-serif; /* el widget hereda esta fuente */
+        }
+        .hint {
+            background: #fff3cd;
+            border: 1px solid #ffe69c;
+            border-radius: .5rem;
+            padding: 1rem;
+            font-family: ui-sans-serif, system-ui, sans-serif;
+            font-size: .9rem;
+        }
+        code { background: #f1ede7; padding: .1rem .3rem; border-radius: .25rem; }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <h1>Peluquería Estudio Norte</h1>
+        <p>Página de ejemplo de un sitio de terceros que embebe el widget</p>
+    </header>
+
+    <main>
+        <section>
+            <h2>Nuestros servicios</h2>
+            <p>
+                Este HTML simula el sitio propio de un negocio. El recuadro de al lado
+                es el widget de Agendaflex montado con un simple <code>&lt;script&gt;</code>:
+            </p>
+            <pre style="overflow-x:auto; background:#f1ede7; padding:1rem; border-radius:.5rem; font-size:.8rem">&lt;div id="agendaflex"&gt;&lt;/div&gt;
+&lt;script src="https://tu-dominio/widget/agendaflex-widget.js" defer&gt;&lt;/script&gt;
+&lt;script&gt;
+  window.addEventListener('load', function () {
+    Agendaflex.mount('#agendaflex', {
+      tenant: 'estudio-norte',
+      publicKey: 'pk_...',
+      apiBase: 'https://tu-dominio',
+    });
+  });
+&lt;/script&gt;</pre>
+        </section>
+
+        <section class="widget-panel">
+            <div id="agendaflex">
+                <p class="hint">
+                    Faltan parámetros. Abrí esta página como
+                    <code>/widget-demo.html?tenant=SLUG&amp;key=pk_...</code>
+                    (o usá <code>/widget-demo</code> en local, que completa los datos de la empresa demo).
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <script src="/widget/agendaflex-widget.js" defer></script>
+    <script>
+        window.addEventListener('load', function () {
+            var params = new URLSearchParams(window.location.search);
+            var tenant = params.get('tenant');
+            var key = params.get('key');
+
+            if (!tenant || !key || !window.Agendaflex) {
+                return; // queda visible el hint
+            }
+
+            document.getElementById('agendaflex').innerHTML = '';
+
+            window.Agendaflex.mount('#agendaflex', {
+                tenant: tenant,
+                publicKey: key,
+                apiBase: params.get('apiBase') || window.location.origin,
+            });
+        });
+    </script>
+</body>
+</html>

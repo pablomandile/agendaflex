@@ -14,7 +14,7 @@
 | 3 | Multi-tenancy + roles | ✅ |
 | 4 | Modelo de datos / dominio | ✅ |
 | 5 | Motor de disponibilidad + booking + calendario del panel | ✅ |
-| 6 | Widget público + API REST | ⬜ |
+| 6 | Widget público + API REST | ✅ |
 | 7 | Notificaciones email + reportes | ⬜ |
 | 8 | Responsive + verificación end-to-end + pulido | ⬜ |
 
@@ -149,15 +149,17 @@ Pendiente menor (a Etapa 8): bloquear/desbloquear `time_off` desde la UI del cal
 ---
 
 ## Etapa 6 — Widget público + API REST
-**Estado:** ⬜ Pendiente · **Depende de:** Etapa 5
+**Estado:** ✅ Completada · **Depende de:** Etapa 5
 
-- [ ] `php artisan install:api` (Sanctum + `routes/api.php`)
-- [ ] Endpoints `/api/v1/{company:slug}/...` bajo `ResolveCompanyFromPublicKey`: `GET services`, `GET employees`, `GET availability`, `POST bookings` (nunca listar `customers`; devolver uuid/slug)
-- [ ] `POST bookings`: crea/matchea `customer` por email + `appointment` (source=widget) vía booking transaccional; rate-limit + captcha
-- [ ] Links firmados (`URL::signedRoute`/temporary) en el email para cancelar/reprogramar sin login
-- [ ] Widget Vue en `resources/widget/`: `main.ts` expone `window.Agendaflex.mount('#sel', { tenant, apiBase })`; `Widget.vue` (flujo servicio → empleado → fecha/slot → datos → confirmación); `api.ts`; solo imports nombrados de PrimeVue; ancho `100%` del host (nunca `100vw`), `box-sizing:border-box`; theming por tenant vía CSS vars `--p-primary-*`
-- [ ] `config/cors.php`: `paths:['api/*']`, `allowed_origins:['*']`, `supports_credentials:false`
-- [ ] Verificar embebido: `npm run build:widget` → HTML de prueba en otro origen que monta el widget, lista servicios y crea reserva (CORS OK)
+- [x] `php artisan install:api` (Sanctum instalado para API de partners futura; el widget es stateless por clave pública)
+- [x] API v1 `/api/v1/{company}/...` bajo `tenant.public`: `GET catalog` (empresa+branding, sucursales, servicios con skills, empleados — **todo por uuid/slug, cero IDs internos**), `GET availability` (slots con `employee_uuid`), `POST bookings` (matchea/crea customer por email, `source=widget`, booking transaccional, devuelve resumen + `manage_url` firmado)
+- [x] Rate limiting por clave pública + IP: `throttle:widget` (120/min lecturas) y `throttle:widget-book` (10/min reservas). Captcha diferido a fase 2 (requiere cuenta externa reCAPTCHA/hCaptcha)
+- [x] Gestión sin login: rutas firmadas `GET/POST /booking/{uuid}` (`PublicBookingController` + Blade standalone) — ver detalle y **cancelar** con confirmación; reprogramar sin login = cancelar + reservar de nuevo (la reprogramación asistida vive en el panel)
+- [x] Widget Vue completo en `resources/widget/`: `api.ts` (cliente tipado con X-Public-Key), `Widget.vue` (flujo sucursal → servicio por categoría → profesional/"cualquiera" → fecha inline + slots → datos del cliente → confirmación con link de gestión), theming por tenant vía `settings.branding.primary` → CSS vars `--p-primary-*`, ancho 100% del host, `box-sizing` propio — **121 KB gzip**
+- [x] `config/cors.php` publicado: `api/*`, orígenes `*`, `supports_credentials:false`, preflight cacheado; validación adicional de `Origin` por empresa vía `allowed_origins` (403)
+- [x] Demo de embebido: [public/widget-demo.html](public/widget-demo.html) (simula sitio de terceros, lee `?tenant=&key=`) + ruta local `/widget-demo` que la abre con la empresa seed
+- [x] Tests: 11 nuevos (sin key 401, key inválida/suspendida 404, Origin no permitido 403, catálogo sin IDs internos y scopeado, slots, reserva con manage_url, conflicto 422, página firmada 403/200, cancelación firmada) — **101 tests en verde**
+- [x] **Smoke test E2E real** (server + HTTP): catálogo → disponibilidad → reserva → página de gestión firmada → 401 sin key ✅. Probar visual: `php artisan serve` + `/widget-demo`
 
 ---
 

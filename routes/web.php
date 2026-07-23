@@ -6,6 +6,8 @@ use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CompanySwitchController;
 use App\Http\Controllers\CustomerSearchController;
+use App\Http\Controllers\PublicBookingController;
+use App\Models\Company;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -18,6 +20,23 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])->name('google.redirect');
     Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 });
+
+// Gestión del turno sin login: links firmados enviados por email
+Route::middleware('signed')->group(function () {
+    Route::get('booking/{appointment:uuid}', [PublicBookingController::class, 'show'])->name('booking.manage');
+    Route::post('booking/{appointment:uuid}/cancel', [PublicBookingController::class, 'cancel'])->name('booking.cancel');
+});
+
+// Solo local: abre la demo del widget con los datos de la empresa seed
+if (app()->environment('local')) {
+    Route::get('widget-demo', function () {
+        $company = Company::query()->where('slug', 'estudio-norte')->first();
+
+        abort_unless($company !== null, 404, 'Corré primero: php artisan db:seed --class=DemoSeeder');
+
+        return redirect("/widget-demo.html?tenant={$company->slug}&key={$company->public_key}");
+    });
+}
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
