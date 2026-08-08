@@ -32,9 +32,10 @@
 
         <title inertia>{{ config('app.name', 'AgendaFlex') }}</title>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/img/agendaflex-icono.png" type="image/png">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        {{-- ?v= obligatorio: el CDN de Hostinger cachea 7 días los estáticos de URL fija --}}
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any">
+        <link rel="icon" href="/img/agendaflex-icono.png?v=2" type="image/png">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
