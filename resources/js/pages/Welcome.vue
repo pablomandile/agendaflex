@@ -118,11 +118,7 @@ const embedSnippet = `<div id="agendaflex"></div>
                 class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6"
             >
                 <Link :href="'/'" class="flex items-center gap-2">
-                    <div
-                        class="flex size-8 items-center justify-center rounded-lg bg-indigo-600"
-                    >
-                        <AppLogoIcon class="size-5 fill-current text-white" />
-                    </div>
+                    <AppLogoIcon class="size-9" />
                     <span class="text-lg font-semibold tracking-tight"
                         >AgendaFlex</span
                     >
@@ -510,11 +506,7 @@ const embedSnippet = `<div id="agendaflex"></div>
                 class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 sm:flex-row"
             >
                 <div class="flex items-center gap-2">
-                    <div
-                        class="flex size-7 items-center justify-center rounded-lg bg-indigo-600"
-                    >
-                        <AppLogoIcon class="size-4 fill-current text-white" />
-                    </div>
+                    <AppLogoIcon class="size-7" />
                     <span class="text-sm font-medium">AgendaFlex</span>
                 </div>
                 <p class="text-sm text-muted-foreground">
