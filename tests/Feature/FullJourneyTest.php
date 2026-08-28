@@ -32,8 +32,16 @@ class FullJourneyTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const TIMEZONE = 'America/Argentina/Buenos_Aires';
+
     public function test_the_complete_booking_lifecycle_across_two_companies()
     {
+        // El turno se agenda "el proximo miercoles" y el reporte del paso 6
+        // usa el mes en curso por defecto. Arrancando el dia 1, ese miercoles
+        // cae siempre dentro del mismo mes; sin esto el test se rompe solo
+        // los ultimos dias de cada mes, cuando el turno se va al mes que viene.
+        $this->travelTo(CarbonImmutable::now(self::TIMEZONE)->startOfMonth());
+
         Mail::fake();
         $this->seed(RolesAndPermissionsSeeder::class);
 
@@ -125,7 +133,7 @@ class FullJourneyTest extends TestCase
         $company = Company::factory()->create([
             'name' => $name,
             'slug' => $slug,
-            'timezone' => 'America/Argentina/Buenos_Aires',
+            'timezone' => self::TIMEZONE,
         ]);
 
         app(CurrentCompany::class)->set($company);
